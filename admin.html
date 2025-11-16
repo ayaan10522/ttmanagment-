@@ -1,0 +1,205 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Admin • Academy Management</title>
+    <link rel="stylesheet" href="style.css" />
+    <script src="https://www.gstatic.com/firebasejs/11.0.2/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore-compat.js"></script>
+    <script defer src="script.js"></script>
+  </head>
+  <body data-page="admin">
+    <header class="topbar">
+      <div class="brand">Karimabad TT Management</div>
+      <nav class="nav">
+        <a href="admin.html" class="active">Admin</a>
+        <a href="player.html">Player</a>
+      </nav>
+    </header>
+
+    <main class="container">
+      <div class="tabs">
+        <button class="tab active" data-tab="overview">Overview</button>
+        <button class="tab" data-tab="manage">Manage</button>
+        <button class="tab" data-tab="players">Players</button>
+        <button class="tab" data-tab="attendance">Attendance</button>
+        <button class="tab" data-tab="applications">Applications</button>
+        <button class="tab" data-tab="analytics">Analytics</button>
+        <button class="tab" data-tab="matches">Matches</button>
+        <button class="tab" data-tab="notes">Notes</button>
+        <button class="tab" data-tab="payments">Payments</button>
+        <button class="tab" data-tab="tournaments">Tournaments</button>
+      </div>
+
+      <section id="tab-overview" class="panel active">
+        <div class="grid stats">
+          <div class="card"><div class="label">Total Players</div><div id="stat-total" class="value">0</div></div>
+          <div class="card"><div class="label">Paid</div><div id="stat-paid" class="value text-green">0</div></div>
+          <div class="card"><div class="label">Unpaid</div><div id="stat-unpaid" class="value text-red">0</div></div>
+          <div class="card"><div class="label">Active</div><div id="stat-active" class="value text-green">0</div></div>
+          <div class="card"><div class="label">Expired</div><div id="stat-expired" class="value text-yellow">0</div></div>
+        </div>
+        <div class="card">
+          <div class="label">Distribution</div>
+          <div id="bar-indicators" class="bars"></div>
+        </div>
+      </section>
+
+      <section id="tab-manage" class="panel">
+        <div class="grid two">
+          <div class="card">
+            <div class="label">Add / Edit Player</div>
+            <form id="player-form" class="form grid two">
+              <input id="pf-name" placeholder="Name" />
+              <input id="pf-phone" placeholder="Phone" />
+              <input id="pf-username" placeholder="Username" />
+              <input id="pf-password" type="password" placeholder="Password" />
+              <select id="pf-slot"></select>
+              <input id="pf-slotEnd" type="date" placeholder="Slot End" />
+              <select id="pf-payment">
+                <option>Paid</option>
+                <option selected>Unpaid</option>
+              </select>
+              <button type="submit" class="btn primary">Save</button>
+              <input id="pf-id" type="hidden" />
+            </form>
+          </div>
+          <div class="card">
+            <div class="label">Slots</div>
+            <div class="grid two">
+              <input id="slot-name" placeholder="Slot name" />
+              <input id="slot-cap" type="number" placeholder="Capacity" />
+              <button id="slot-add" class="btn">Add Slot</button>
+            </div>
+            <div id="slot-list" class="list"></div>
+          </div>
+        </div>
+      </section>
+
+      <section id="tab-players" class="panel">
+        <div class="grid two">
+          <input id="search" placeholder="Search by name, username, phone" />
+          <select id="sort">
+            <option value="name">Name</option>
+            <option value="phone">Phone</option>
+            <option value="username">Username</option>
+            <option value="slot">Slot</option>
+            <option value="slotEndDate">Slot End Date</option>
+            <option value="paymentStatus">Payment</option>
+          </select>
+        </div>
+        <div id="players-table" class="table"></div>
+      </section>
+
+      <section id="tab-attendance" class="panel">
+        <div class="grid three">
+          <input id="att-code" readonly />
+          <button id="att-regen" class="btn primary">Regenerate Code</button>
+          <button id="att-copy" class="btn">Copy</button>
+          <button id="att-export" class="btn">Export CSV</button>
+        </div>
+        <div id="attendance-table" class="table"></div>
+      </section>
+
+      <section id="tab-applications" class="panel">
+        <div id="applications-table" class="table"></div>
+      </section>
+
+      <section id="tab-analytics" class="panel">
+        <div class="grid three">
+          <div class="card">
+            <div class="label">Monthly Attendance % per Player</div>
+            <div id="an-perplayer" class="list"></div>
+          </div>
+          <div class="card">
+            <div class="label">Top 5 Regular Players</div>
+            <div id="an-top5" class="list"></div>
+          </div>
+          <div class="card">
+            <div class="label">Monthly Activity Heatmap</div>
+            <div id="an-heatmap" class="heatmap"></div>
+          </div>
+        </div>
+      </section>
+
+      <section id="tab-matches" class="panel">
+        <div class="card">
+          <div class="label">Schedule Match</div>
+          <div class="grid four">
+            <select id="match-player-a"></select>
+            <select id="match-player-b"></select>
+            <select id="match-slot"></select>
+            <input id="match-date" type="datetime-local" />
+            <textarea id="match-note" placeholder="Rules / Notes" rows="3"></textarea>
+            <button id="match-add" class="btn primary">Add</button>
+          </div>
+        </div>
+        <div class="mt table" id="matches-table"></div>
+      </section>
+
+      <section id="tab-notes" class="panel">
+        <div class="card">
+          <div class="label">Send Note to Player</div>
+          <div class="grid two">
+            <select id="notes-player"></select>
+            <textarea id="notes-text" placeholder="Write note" rows="3"></textarea>
+            <button id="notes-add" class="btn primary">Send</button>
+          </div>
+        </div>
+        <div class="mt table" id="notes-table"></div>
+      </section>
+
+      <section id="tab-payments" class="panel">
+        <div class="card">
+          <div class="label">Add Payment / Status</div>
+          <div class="grid three">
+            <select id="pay-player"></select>
+            <input id="pay-amount" type="number" placeholder="Amount" />
+            <select id="pay-status"><option>Received</option><option>Unpaid</option></select>
+            <input id="pay-method" placeholder="Method" />
+            <input id="pay-note" placeholder="Note" />
+            <button id="pay-add" class="btn primary">Add</button>
+          </div>
+        </div>
+        <div class="mt table" id="pay-table"></div>
+      </section>
+
+      <section id="tab-tournaments" class="panel">
+        <div class="grid two">
+          <div class="card">
+            <div class="label">Create Tournament</div>
+            <div class="grid two">
+              <input id="tour-name" placeholder="Tournament name" />
+              <button id="tour-add" class="btn primary">Create</button>
+            </div>
+          </div>
+          <div class="card">
+            <div class="label">Manage Tournament</div>
+            <div class="grid four">
+              <select id="tour-select"></select>
+              <button id="tour-advance" class="btn">Advance Round</button>
+              <select id="tour-player-a"></select>
+              <select id="tour-player-b"></select>
+              <select id="tour-slot"></select>
+              <input id="tour-date" type="datetime-local" />
+              <button id="tour-match-add" class="btn primary">Add Match</button>
+            </div>
+            <div class="mt"><div class="text">Stage: <span id="tour-stage"></span></div></div>
+          </div>
+          <div class="card">
+            <div class="label">Participants</div>
+            <div class="grid two">
+              <select id="tour-participant"></select>
+              <button id="tour-add-participant" class="btn">Add Participant</button>
+              <button id="tour-generate" class="btn primary">Generate Round</button>
+            </div>
+            <div id="tour-participants" class="list"></div>
+          </div>
+        </div>
+        <div class="mt table" id="tour-matches"></div>
+      </section>
+    </main>
+    <footer class="footer">This site is made by <a href="https://www.instagram.com/thakahuva.bmc/" target="_blank" rel="noopener">Ayaan</a></footer>
+  </body>
+  </html>

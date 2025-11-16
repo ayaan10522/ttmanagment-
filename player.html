@@ -1,0 +1,139 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Player • Academy</title>
+    <link rel="stylesheet" href="style.css" />
+    <script src="https://www.gstatic.com/firebasejs/11.0.2/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore-compat.js"></script>
+    <script defer src="script.js"></script>
+  </head>
+  <body data-page="player">
+    <header class="topbar">
+      <div class="brand">Karimabad TT Management</div>
+      <nav class="nav">
+        <a href="admin.html">Admin</a>
+        <a href="player.html" class="active">Player</a>
+      </nav>
+    </header>
+
+    <main class="container">
+      <section id="login-panel" class="panel">
+        <div class="card">
+          <div class="label">Player Login</div>
+          <div class="grid two">
+            <input id="login-username" placeholder="Username" />
+            <input id="login-password" type="password" placeholder="Password" />
+            <button id="login-btn" class="btn primary">Login</button>
+            <div id="login-error" class="text-red"></div>
+          </div>
+          <div class="mt">
+            <a href="#" id="show-apply" class="link">Apply to become a member</a>
+          </div>
+        </div>
+      </section>
+
+      <section id="apply-panel" class="panel hidden">
+        <div class="card">
+          <div class="label">Application</div>
+          <form id="apply-form" class="grid two">
+            <input name="name" placeholder="Name" />
+            <input name="phone" placeholder="Phone" />
+            <input name="username" placeholder="Preferred Username" />
+            <select name="slot" id="apply-slot-select"></select>
+            <button class="btn primary" type="submit">Submit</button>
+          </form>
+        </div>
+      </section>
+
+      <div id="player-tabs" class="tabs hidden">
+        <button class="tab active" data-ptab="dashboard">Dashboard</button>
+        <button class="tab" data-ptab="analytics">Analytics</button>
+        <button class="tab" data-ptab="payments">Payments</button>
+        <button class="tab" data-ptab="matches">Matches</button>
+        <button class="tab" data-ptab="tournaments">Tournaments</button>
+        <button class="tab" data-ptab="notes">Notes</button>
+        <button class="tab" data-ptab="profile">Profile</button>
+        <button class="tab" data-ptab="logout">Logout</button>
+      </div>
+
+      <section id="p-tab-dashboard" class="panel hidden">
+        <div class="grid three">
+          <div class="card">
+            <div class="label">Attendance %</div>
+            <div id="pd-att-percent" class="value">0%</div>
+            <div class="grid two mt">
+              <input id="pd-code" placeholder="Enter today code" />
+              <button id="pd-mark" class="btn primary">Mark Present</button>
+            </div>
+          </div>
+          <div class="card">
+            <div class="label">Payments</div>
+            <div id="pd-payments" class="list"></div>
+          </div>
+          <div class="card">
+            <div class="label">Slot</div>
+            <div id="pd-slot" class="value"></div>
+            <div id="pd-slot-end" class="text"></div>
+            <div id="pd-slot-players" class="list mt"></div>
+          </div>
+        </div>
+      </section>
+
+      <section id="p-tab-analytics" class="panel hidden">
+        <div class="grid two">
+          <div class="card">
+            <div class="label">Monthly Attendance Trend</div>
+            <div id="p-an-bars" class="list"></div>
+          </div>
+          <div class="card">
+            <div class="label">Activity Heatmap</div>
+            <div id="p-an-heatmap" class="heatmap"></div>
+          </div>
+        </div>
+      </section>
+
+      <section id="p-tab-payments" class="panel hidden">
+        <div class="card">
+          <div class="label">Payment History</div>
+          <div id="p-payments-table" class="table"></div>
+        </div>
+      </section>
+
+      <section id="p-tab-matches" class="panel hidden">
+        <div class="card">
+          <div class="label">Upcoming Matches</div>
+          <div id="p-matches-table" class="table"></div>
+        </div>
+      </section>
+
+      <section id="p-tab-tournaments" class="panel hidden">
+        <div class="card">
+          <div class="label">Tournament Schedule</div>
+          <div id="p-next-match" class="text"></div>
+          <div id="p-tour-table" class="table mt"></div>
+        </div>
+      </section>
+
+      <section id="p-tab-notes" class="panel hidden">
+        <div class="card">
+          <div class="label">Coach Notes & Performance</div>
+          <div id="p-notes" class="text"></div>
+          <div id="p-performance" class="text"></div>
+        </div>
+      </section>
+
+      <section id="p-tab-profile" class="panel hidden">
+        <div class="card">
+          <div class="label">Change Password</div>
+          <div class="grid two">
+            <input id="p-newpass" type="password" placeholder="New password" />
+            <button id="p-savepass" class="btn primary">Save</button>
+          </div>
+        </div>
+      </section>
+    </main>
+    <footer class="footer">This site is made by <a href="https://www.instagram.com/thakahuva.bmc/" target="_blank" rel="noopener">Ayaan</a></footer>
+  </body>
+  </html>
