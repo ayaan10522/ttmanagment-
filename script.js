@@ -23,6 +23,7 @@ async function sha256(text) {
 function byId(id) { return document.getElementById(id) }
 function show(el) { el.classList.add('active'); el.classList.remove('hidden') }
 function hide(el) { el.classList.remove('active'); el.classList.add('hidden') }
+function escapeHtml(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;') }
 
 function daysDiff(endStr) {
   if (!endStr) return 999
@@ -233,7 +234,6 @@ function renderPlayersTable(players, slots) {
         <button class="btn" data-del="${p.id}">Delete</button>
         <button class="btn" data-pay="${p.id}" data-paystat="${p.paymentStatus}">Set ${p.paymentStatus==='Paid'?'Unpaid':'Paid'}</button>
         <button class="btn" data-paylog="${p.id}">Add Payment</button>
-        <button class="btn" data-note="${p.id}">Send Note</button>
       </td>
     </tr>`
   }).join('')
@@ -256,12 +256,7 @@ function renderPlayersTable(players, slots) {
   container.querySelectorAll('[data-del]').forEach(b=>b.addEventListener('click', ev=> deletePlayer(ev.target.getAttribute('data-del')) ))
   container.querySelectorAll('[data-pay]').forEach(b=>b.addEventListener('click', ev=> togglePayment(ev.target.getAttribute('data-pay'), ev.target.getAttribute('data-paystat')) ))
   container.querySelectorAll('[data-paylog]').forEach(b=>b.addEventListener('click', ev=> addPaymentLog(ev.target.getAttribute('data-paylog')) ))
-  container.querySelectorAll('[data-note]').forEach(b=>b.addEventListener('click', async ev=>{
-    const playerId = ev.target.getAttribute('data-note')
-    const text = prompt('Enter note for player')
-    if (!text) return
-    await db.collection('notes').add({ playerId, text, date: new Date().toISOString() })
-  }))
+  
 }
 
 async function refreshPlayers() {
@@ -358,19 +353,8 @@ function setupAdmin() {
   refreshAll()
   refreshAdminAnalytics()
   refreshMatchesAdmin()
-  refreshAdminNotes()
   refreshAdminPayments()
   refreshAdminTournaments()
-  byId('notes-player')?.addEventListener('change', refreshAdminNotes)
-  byId('notes-add')?.addEventListener('click', async()=>{
-    const text = byId('notes-text').value.trim()
-    const current = byId('notes-player').value
-    if (!current || !text) return
-    await db.collection('notes').add({ playerId: current, text, date: new Date().toISOString() })
-    byId('notes-text').value = ''
-    cacheWrite('notes:'+current, null)
-    refreshAdminNotes()
-  })
   byId('pay-player')?.addEventListener('change', refreshAdminPayments)
   byId('pay-add')?.addEventListener('click', async()=>{
     const current = byId('pay-player').value
@@ -397,7 +381,7 @@ async function refreshMatchesAdmin() {
   const rows = ms.map(m=>{
     const a = m.playerIds?.[0]
     const b = m.playerIds?.[1]
-    return `<tr><td>${nameFor(a)} vs ${nameFor(b)}</td><td>${slotName(m.slotId||'')}</td><td>${m.date}</td><td>${m.status||''}</td><td>${m.note||''}</td></tr>`
+    return `<tr><td>${nameFor(a)} vs ${nameFor(b)}</td><td>${slotName(m.slotId||'')}</td><td>${m.date}</td><td>${m.status||''}</td><td>${escapeHtml(m.note||'')}</td></tr>`
   }).join('')
   byId('matches-table').innerHTML = `<table><thead><tr><th>Players</th><th>Slot</th><th>Date</th><th>Status</th><th>Note</th></tr></thead><tbody>${rows}</tbody></table>`
   const selA = byId('match-player-a')
@@ -408,19 +392,7 @@ async function refreshMatchesAdmin() {
   if (selS) selS.innerHTML = `<option value="">Choose Slot</option>` + slots.map(s=>`<option value="${s.id}">${s.name}</option>`).join('')
 }
 
-async function refreshAdminNotes() {
-  const players = await listPlayers()
-  const sel = byId('notes-player')
-  const prev = sel?.value || ''
-  if (sel) sel.innerHTML = `<option value="">Choose Player</option>` + players.map(p=>`<option value="${p.id}">${p.name}</option>`).join('')
-  if (prev && players.find(p=>p.id===prev)) sel.value = prev
-  const pid = sel?.value || players[0]?.id || ''
-  const notes = await getNotesFast(pid)
-  const rows = notes.sort((a,b)=> String(b.date).localeCompare(String(a.date))).map(n=>`<tr><td>${n.date}</td><td>${n.text}</td><td><button class="btn" data-n-del="${n.id}">Delete</button></td></tr>`).join('')
-  byId('notes-table').innerHTML = `<table><thead><tr><th>Date</th><th>Note</th><th></th></tr></thead><tbody>${rows}</tbody></table>`
-  byId('notes-table').querySelectorAll('[data-n-del]').forEach(b=>b.addEventListener('click', async ev=>{ const nid=ev.target.getAttribute('data-n-del'); await db.collection('notes').doc(nid).delete(); cacheWrite('notes:'+pid, null); refreshAdminNotes() }))
-  
-}
+
 
 async function refreshAdminPayments() {
   const players = await listPlayers()
@@ -585,7 +557,6 @@ async function playerLogin() {
     await loadPlayerPaymentsTable()
     await loadPlayerMatches()
     await loadPlayerTournaments()
-    await loadPlayerNotes()
   } else { byId('login-error').textContent = 'Invalid login' }
 }
 
@@ -661,7 +632,6 @@ function setupPlayer() {
     loadPlayerPaymentsTable()
     loadPlayerMatches()
     loadPlayerTournaments()
-    loadPlayerNotes()
   } else {
     show(byId('login-panel'))
     hide(byId('apply-panel'))
@@ -671,14 +641,17 @@ function setupPlayer() {
   byId('apply-form').addEventListener('submit', submitApplication)
   listSlots().then(populateSlotSelects)
   byId('pd-mark').addEventListener('click', markPresent)
-  document.querySelectorAll('#player-tabs .tab').forEach(b=>b.addEventListener('click', ev=>{
-    document.querySelectorAll('#player-tabs .tab').forEach(x=>x.classList.remove('active'))
-    ev.currentTarget.classList.add('active')
-    const t = ev.currentTarget.getAttribute('data-ptab')
+  const tabsContainer = byId('player-tabs')
+  tabsContainer.addEventListener('click', ev => {
+    const btn = ev.target.closest('.tab')
+    if (!btn) return
+    tabsContainer.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'))
+    btn.classList.add('active')
+    const t = btn.getAttribute('data-ptab')
     document.querySelectorAll('[id^=p-tab-]').forEach(p=>p.classList.add('hidden'))
     if (t==='logout') { sessionStorage.removeItem('playerId'); location.reload(); return }
     show(byId('p-tab-'+t))
-  }))
+  })
   byId('p-savepass').addEventListener('click', async()=>{
     const id = sessionStorage.getItem('playerId')
     const np = byId('p-newpass').value
@@ -722,18 +695,12 @@ async function loadPlayerMatches() {
   const slotName = sid => (slots.find(s=>s.id===sid)?.name||'')
   const rows = ms.slice().sort((a,b)=> String(a.date).localeCompare(String(b.date))).map(m=>{
     const oppId = (Array.isArray(m.playerIds) ? m.playerIds.find(pid=>pid!==id) : '')
-    return `<tr><td>${nameFor(oppId)}</td><td>${slotName(m.slotId||'')}</td><td>${m.date}</td><td>${m.status||''}</td><td>${m.note||''}</td></tr>`
+    return `<tr><td>${nameFor(oppId)}</td><td>${slotName(m.slotId||'')}</td><td>${m.date}</td><td>${m.status||''}</td><td>${escapeHtml(m.note||'')}</td></tr>`
   }).join('')
   byId('p-matches-table').innerHTML = `<table><thead><tr><th>Opponent</th><th>Slot</th><th>Date</th><th>Status</th><th>Note</th></tr></thead><tbody>${rows}</tbody></table>`
 }
 
-async function loadPlayerNotes() {
-  const id = sessionStorage.getItem('playerId')
-  if (!id) return
-  const notes = await getNotesFast(id)
-  byId('p-notes').innerHTML = notes.map(n=>`<div class="item"><div class="text">${n.date}</div><div class="text">${n.text}</div></div>`).join('') || 'No notes yet'
-  byId('p-performance').textContent = ''
-}
+
 
 document.addEventListener('DOMContentLoaded', () => {
   const page = document.body.getAttribute('data-page')
@@ -741,11 +708,6 @@ document.addEventListener('DOMContentLoaded', () => {
   if (page === 'admin') setupAdmin()
   if (page === 'player') setupPlayer()
 })
-async function listNotes(playerId) {
-  const q = playerId ? db.collection('notes').where('playerId','==',playerId) : db.collection('notes')
-  const snap = await q.get()
-  return snap.docs.map(d=>({ id:d.id, ...d.data() }))
-}
 const CACHE = { store: {}, ttl: 30000 }
 function cacheRead(key) { const e = CACHE.store[key]; if (!e) return null; if (Date.now() - e.t < CACHE.ttl) return e.v; return null }
 function cacheWrite(key, v) { CACHE.store[key] = { v, t: Date.now() } }
@@ -755,6 +717,6 @@ async function getAttendanceFast(date) { const k = 'att:'+ (date||'all'); const 
 async function getPaymentsFast(playerId) { const k = 'pay:'+playerId; const c = cacheRead(k); if (c) return c; const snap = await db.collection('payments').where('playerId','==',playerId).get(); const v = snap.docs.map(d=>d.data()); cacheWrite(k, v); return v }
 async function getMatchesFast() { const c = cacheRead('matches'); if (c) return c; const snap = await db.collection('matches').get(); const v = snap.docs.map(d=>({ id:d.id, ...d.data() })); cacheWrite('matches', v); return v }
 async function getMatchesForPlayerFast(id) { const k='m:'+id; const c=cacheRead(k); if (c) return c; const snap=await db.collection('matches').where('playerIds','array-contains',id).get(); const v=snap.docs.map(d=>({ id:d.id, ...d.data() })); cacheWrite(k,v); return v }
-async function getNotesFast(playerId) { const k='notes:'+playerId; const c=cacheRead(k); if (c) return c; const v = await listNotes(playerId); cacheWrite(k, v); return v }
+
 async function getTournamentsFast() { const c = cacheRead('tours'); if (c) return c; const v = await listTournaments(); cacheWrite('tours', v); return v }
 async function getAttendanceForPlayerFast(id) { const k='attp:'+id; const c=cacheRead(k); if (c) return c; const snap=await db.collection('attendance').where('playerId','==',id).get(); const v=snap.docs.map(d=>d.data()); cacheWrite(k,v); return v }
